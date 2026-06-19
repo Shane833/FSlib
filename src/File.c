@@ -32,6 +32,7 @@ File *File_open(const char *filepath, ACCESS_MODE mode){
     }
     check(temp->fileptr != NULL, "Failed to open file!");
     
+    /*
     temp->current_line = malloc(sizeof(Line));
     check(temp->current_line != NULL, "Failed to initialize line!");
 
@@ -39,6 +40,7 @@ File *File_open(const char *filepath, ACCESS_MODE mode){
     temp->current_line->line_no = 0; // Initially set to zero to depict file not read yet
     
     temp->lines = NULL;
+    */
 
     return temp;
 error:
@@ -46,11 +48,11 @@ error:
     return NULL;
 }
 
-int File_readline(File *file){
+int File_readline1(File *file, bstring line){
     check(file != NULL, "Invalid File Object!");
     check(file->fileptr != NULL, "No file opened!");
 
-    size_t line_len = 0; 
+    //size_t line_len = 0; 
     unsigned char c = '\0';
 
     while(!feof(file->fileptr)){
@@ -58,6 +60,7 @@ int File_readline(File *file){
         line_len++;
         
         if(c == '\n'){
+            /*
             check(file->current_line != NULL, "");
             // Deallocate line if it has something
             if(file->current_line->data){
@@ -67,21 +70,22 @@ int File_readline(File *file){
             // Allocate the line
             file->current_line->data = malloc(sizeof(struct tagbstring));
             check(file->current_line->data != NULL, "Failed to initialized line");
+            */
             // Currently line_len represents index
             // we convert to actual size by adding one
             // Move back the to the start of the line
             //fseek(file->fileptr, -(line_len + 1), SEEK_CUR);
             fseek(file->fileptr, -(line_len), SEEK_CUR);
-            // get the line
+            // Get the line
+            // First deallocate any existing data
+            free(line->data);
             // Allocate the line data and copy the line
-            file->current_line->data->data = calloc(1, line_len + 1);
-            check(file->current_line->data->data != NULL, " Failed to initialize line data");
-            file->current_line->data->mlen = file->current_line->data->mlen = line_len; 
+            line->data = calloc(1, line_len + 1);
+            check(line->data != NULL, " Failed to initialize line data");
+            line->mlen = line->slen = line_len; 
             // fgets, if successful returns the address of the passed buffer
-            check(fgets(file->current_line->data->data, line_len + 1,\
-                        file->fileptr) == file->current_line->data->data, "Failed to read the line!");
-
-            // We will copy the read line from the buffer
+            check(fgets(line->data, line_len + 1,\
+                        file->fileptr) == line->data, "Failed to read the line!");
 
             break;
         }
@@ -95,21 +99,86 @@ int File_readline(File *file){
         //if(file->current_line->line_no == 0){ file->current_line->line_no = 1; }
         return 0; // but this is not a failed state, its completely fine 
     }else{
-        check(file->current_line != NULL, "");
-        file->current_line->line_no++;
         return 0;
     }
 
 error:
     // Reset the line
-    if(file->current_line->data){
-        bdestroy(file->current_line->data);
-        file->current_line->data = NULL;
+    if(line->data){
+        bdestroy(line->data);
+        line->data = NULL;
     }
-    file->current_line->line_no = 0;
+    //file->current_line->line_no = 0;
     return -1;
 }
 
+int File_readline2(File *file, bstring line){
+    check(file != NULL, "Invalid File Object!");
+    check(file->fileptr != NULL, "No file opened!");
+
+    //size_t line_len = 0; 
+    unsigned char c = '\0';
+
+    while(!feof(file->fileptr)){
+        c = fgetc(file->fileptr);
+        if(c == '\n') break;
+        bconchar(line, c);
+        //line_len++;
+       
+        /*
+        if(c == '\n'){
+            // MUTLILINE COMM START 
+            // check(file->current_line != NULL, "");
+            // Deallocate line if it has something
+            if(file->current_line->data){
+                bdestroy(file->current_line->data);
+                file->current_line->data = NULL;
+            }
+            // Allocate the line
+            file->current_line->data = malloc(sizeof(struct tagbstring));
+            check(file->current_line->data != NULL, "Failed to initialized line");
+            // MULTILINE COMM END
+            // Currently line_len represents index
+            // we convert to actual size by adding one
+            // Move back the to the start of the line
+            //fseek(file->fileptr, -(line_len + 1), SEEK_CUR);
+            fseek(file->fileptr, -(line_len), SEEK_CUR);
+            // Get the line
+            // First deallocate any existing data
+            free(line->data);
+            // Allocate the line data and copy the line
+            line->data = calloc(1, line_len + 1);
+            check(line->data != NULL, " Failed to initialize line data");
+            line->mlen = line->slen = line_len; 
+            // fgets, if successful returns the address of the passed buffer
+            check(fgets(line->data, line_len + 1,\
+                        file->fileptr) == line->data, "Failed to read the line!");
+
+            break;
+        }
+        */
+        
+    }
+    
+    // TODO: Fix the case when the file contains only one line
+    // If we are already at the end of the file don't do anything 
+    if(feof(file->fileptr)){
+        fprintf(stderr, "[INFO] End of File reached!\n");
+        //if(file->current_line->line_no == 0){ file->current_line->line_no = 1; }
+        return 0; // but this is not a failed state, its completely fine 
+    }else{
+        return 0;
+    }
+
+error:
+    // Reset the line
+    if(line->data){
+        bdestroy(line->data);
+        line->data = NULL;
+    }
+    //file->current_line->line_no = 0;
+    return -1;
+}
 int File_readlines(File *file){
     check(file != NULL, "Invalid File Object!");
     // store the current position in the file

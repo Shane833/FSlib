@@ -3,10 +3,12 @@
 #include <stdlib.h>
 
 File *File_open(const char *filepath, ACCESS_MODE mode){
+    File *temp = NULL; //
+
     check(filepath != NULL, "Invalid file path!");
     check((Path_exists(filepath) && Path_isFile(filepath)) == true, "Invalid file path!");
 
-    File *temp = malloc(sizeof(File));
+    temp = malloc(sizeof(File));
     check(temp != NULL, "Failed to create file!");
     
     temp->file = Path_open(filepath);
@@ -32,27 +34,18 @@ File *File_open(const char *filepath, ACCESS_MODE mode){
     }
     check(temp->fileptr != NULL, "Failed to open file!");
     
-    /*
-    temp->current_line = malloc(sizeof(Line));
-    check(temp->current_line != NULL, "Failed to initialize line!");
-
-    temp->current_line->data = NULL;
-    temp->current_line->line_no = 0; // Initially set to zero to depict file not read yet
-    
-    temp->lines = NULL;
-    */
-
     return temp;
 error:
-    File_close(temp);
+    if(temp) File_close(temp);
     return NULL;
 }
 
+/* PERFORMS WORSE THEN OTHER FUNCTION 
 int File_readline1(File *file, bstring line){
     check(file != NULL, "Invalid File Object!");
     check(file->fileptr != NULL, "No file opened!");
 
-    //size_t line_len = 0; 
+    size_t line_len = 0; 
     unsigned char c = '\0';
 
     while(!feof(file->fileptr)){
@@ -60,21 +53,6 @@ int File_readline1(File *file, bstring line){
         line_len++;
         
         if(c == '\n'){
-            /*
-            check(file->current_line != NULL, "");
-            // Deallocate line if it has something
-            if(file->current_line->data){
-                bdestroy(file->current_line->data);
-                file->current_line->data = NULL;
-            }
-            // Allocate the line
-            file->current_line->data = malloc(sizeof(struct tagbstring));
-            check(file->current_line->data != NULL, "Failed to initialized line");
-            */
-            // Currently line_len represents index
-            // we convert to actual size by adding one
-            // Move back the to the start of the line
-            //fseek(file->fileptr, -(line_len + 1), SEEK_CUR);
             fseek(file->fileptr, -(line_len), SEEK_CUR);
             // Get the line
             // First deallocate any existing data
@@ -105,80 +83,41 @@ int File_readline1(File *file, bstring line){
 error:
     // Reset the line
     if(line->data){
-        bdestroy(line->data);
+        free(line->data);
         line->data = NULL;
     }
     //file->current_line->line_no = 0;
     return -1;
 }
+*/
 
-int File_readline2(File *file, bstring line){
+// This function performs better than the above implementation
+int File_readline(File *file, bstring line){
     check(file != NULL, "Invalid File Object!");
     check(file->fileptr != NULL, "No file opened!");
+    check(line != NULL, "Invalid line bstring provided!");
 
-    //size_t line_len = 0; 
     unsigned char c = '\0';
-
+    
     while(!feof(file->fileptr)){
         c = fgetc(file->fileptr);
-        if(c == '\n') break;
-        bconchar(line, c);
-        //line_len++;
-       
-        /*
-        if(c == '\n'){
-            // MUTLILINE COMM START 
-            // check(file->current_line != NULL, "");
-            // Deallocate line if it has something
-            if(file->current_line->data){
-                bdestroy(file->current_line->data);
-                file->current_line->data = NULL;
-            }
-            // Allocate the line
-            file->current_line->data = malloc(sizeof(struct tagbstring));
-            check(file->current_line->data != NULL, "Failed to initialized line");
-            // MULTILINE COMM END
-            // Currently line_len represents index
-            // we convert to actual size by adding one
-            // Move back the to the start of the line
-            //fseek(file->fileptr, -(line_len + 1), SEEK_CUR);
-            fseek(file->fileptr, -(line_len), SEEK_CUR);
-            // Get the line
-            // First deallocate any existing data
-            free(line->data);
-            // Allocate the line data and copy the line
-            line->data = calloc(1, line_len + 1);
-            check(line->data != NULL, " Failed to initialize line data");
-            line->mlen = line->slen = line_len; 
-            // fgets, if successful returns the address of the passed buffer
-            check(fgets(line->data, line_len + 1,\
-                        file->fileptr) == line->data, "Failed to read the line!");
 
-            break;
-        }
-        */
-        
+        check(bconchar(line, c) == BSTR_OK, "Failed to copy char into the bstring!");
+        if(c == '\n') break;
     }
     
     // TODO: Fix the case when the file contains only one line
     // If we are already at the end of the file don't do anything 
     if(feof(file->fileptr)){
         fprintf(stderr, "[INFO] End of File reached!\n");
-        //if(file->current_line->line_no == 0){ file->current_line->line_no = 1; }
-        return 0; // but this is not a failed state, its completely fine 
-    }else{
-        return 0;
     }
 
+    return 0;
 error:
-    // Reset the line
-    if(line->data){
-        bdestroy(line->data);
-        line->data = NULL;
-    }
-    //file->current_line->line_no = 0;
     return -1;
 }
+
+/*
 int File_readlines(File *file){
     check(file != NULL, "Invalid File Object!");
     // store the current position in the file
@@ -236,7 +175,9 @@ error:
     }
     return -1;
 }
+*/
 
+/*
 // Reads the lines from the file one by one
 // Searches for the provided word in those files
 // If found adds the line no and the charcter position
@@ -274,28 +215,12 @@ int File_search(File *file, bstring word, DArray *result){
 error:
     return -1;
 }
+*/
 
 int File_reset(File *file){
     check(file != NULL, "Invalid File Object!");
-    // Reset file position
+    // Reset file position OR I could've called rewind(file->fileptr)
     check(fseek(file->fileptr, 0, SEEK_SET) == 0, "Failed to set the file position!");
-    // Reset the current line
-    if(file->current_line->data){
-        bdestroy(file->current_line->data);
-        file->current_line->data = NULL;
-    }
-    file->current_line->line_no = 0; // Initially set to zero to depict file not read yet
-
-    if(file->lines){
-        for(size_t i = 0;i < DArray_count(file->lines);i++){
-            bstring temp = (bstring)DArray_get(file->lines, i);
-            if(temp){
-                bdestroy(temp);
-            }
-        }
-        DArray_destroy(file->lines);
-        file->lines = NULL;
-    }
 
     return 0;
 error:
@@ -334,6 +259,32 @@ error:
     return -1;
 }
 
+int File_tail(File *file, size_t no_lines, DArray *lines){
+    check(file != NULL, "Invalid File Object!");
+    check(lines != NULL, "Invalid lines DArray provided!");
+    
+    fseek(file->fileptr, -1L, SEEK_END);
+    size_t no_of_new_lines = 0; 
+    while(1){
+        unsigned char c = fgetc(file->fileptr);
+        printf("Char : %c\n", c);
+        if(c == '\n'){
+            no_of_new_lines++;
+            if(no_of_new_lines == no_lines) break;
+        }
+
+        fseek(file->fileptr, -2L, SEEK_CUR);
+
+        if(feof(file->fileptr)){
+            printf("End of file reached!\n");
+        }
+    }
+
+    return no_lines;
+error:
+    return -1;
+}
+
 void File_close(File *file){
     if(file){
         if(file->fileptr){
@@ -344,27 +295,6 @@ void File_close(File *file){
             Path_close(file->file);
             file->file = NULL;
         }
-        if(file->lines){
-            for(size_t i = 0;i < DArray_count(file->lines);i++){
-                Line *line = (Line *)DArray_get(file->lines, i);
-                if(line){
-                    bdestroy(line->data);
-                    free(line);
-                }
-                
-            }
-            DArray_destroy(file->lines);
-            file->lines = NULL;
-        }
-        if(file->current_line){
-            if(file->current_line->data){
-                bdestroy(file->current_line->data);
-                file->current_line->data = NULL;
-            }
-            file->current_line->line_no = 0;
-            free(file->current_line);
-        }
-
         free(file);
     }
 }

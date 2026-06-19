@@ -1,7 +1,7 @@
 ifeq ($(OS), Windows_NT)
 	SHELL=powershell.exe
 endif
-CFLAGS=-Wall -Wextra -Wpedantic -ggdb -O2 -std=c23 -Isrc -DNDEBUG -DDEBUG_FILE
+CFLAGS=-Wall -Wextra -Wpedantic -ggdb -O2 -std=c23 -Isrc -DNDEBUG #-DDEBUG_FILE
 #CFLAGS=-Wall -Wextra -Wpedantic -ggdb -O2 -std=c23 -Isrc 
 SANITIZEW=-fsanitize=undefined -fsanitize-trap
 SANITIZEL=-fsanitize=address

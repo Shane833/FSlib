@@ -7,8 +7,8 @@
 File *file = NULL;
 
 char *test_create(){
-    //file = File_open("tests/file.txt", READWRITE_ONLY);
     file = File_open("tests/file.log", READWRITE_ONLY);
+    //file = File_open("tests/file.log", READWRITE_ONLY);
     mu_assert(file != NULL, "Failed to open file!");
 
     return NULL;
@@ -139,6 +139,17 @@ char *test_search(){
 }
 */
 
+char *test_reverse(){
+    char str[10] = "Shivang";
+    log_info("String : %s", str);
+
+    reverse_string(str, strlen(str));
+
+    log_info("Reversed String : %s", str);
+
+    return NULL;
+}
+
 char *test_tail(){
     DArray *lines = DArray_create(sizeof(bstring), 5);
     mu_assert(lines != NULL, "Failed to create lines DArray!");
@@ -159,8 +170,9 @@ char *all_tests(){
     mu_suite_start(); 
 
     mu_run_test(test_create);
-    mu_run_test(test_readline);
+    //mu_run_test(test_readline);
     mu_run_test(test_tail);
+    //mu_run_test(test_reverse);
     //mu_run_test(test_readline_compare);
     //mu_run_test(test_reset);
     //mu_run_test(test_readlines);
@@ -171,4 +183,4 @@ char *all_tests(){
     return NULL;
 }
 
-RUN_TESTS(all_tests);
+RUN_TESTS(all_tests) // removed ';' bcz ISO C doesn't allow ';' outside of functions

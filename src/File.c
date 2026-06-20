@@ -1,6 +1,8 @@
 #include <file.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <Stack.h>
 
 File *File_open(const char *filepath, ACCESS_MODE mode){
     File *temp = NULL; //
@@ -109,7 +111,8 @@ int File_readline(File *file, bstring line){
     // TODO: Fix the case when the file contains only one line
     // If we are already at the end of the file don't do anything 
     if(feof(file->fileptr)){
-        fprintf(stderr, "[INFO] End of File reached!\n");
+        debug("[INFO] End of File reached!");
+        return EOF;
     }
 
     return 0;
@@ -259,28 +262,81 @@ error:
     return -1;
 }
 
+// Utitlity function to reverse a string
+/*static inline*/ void reverse_string(unsigned char *str, size_t n){
+    for(int i = 0;i <= n / 2;i++){
+       char temp = str[i];
+       str[i] = str[n - i - 1];
+       str[n - i - 1] = temp;
+    } 
+}
+
 int File_tail(File *file, size_t no_lines, DArray *lines){
     check(file != NULL, "Invalid File Object!");
     check(lines != NULL, "Invalid lines DArray provided!");
     
-    fseek(file->fileptr, -1L, SEEK_END);
-    size_t no_of_new_lines = 0; 
-    while(1){
-        unsigned char c = fgetc(file->fileptr);
-        printf("Char : %c\n", c);
-        if(c == '\n'){
-            no_of_new_lines++;
-            if(no_of_new_lines == no_lines) break;
+    fseek(file->fileptr, -1L, SEEK_END); // Moving to the end of the file
+    size_t no_of_new_lines = 0; // Counting the no. of lines processed 
+    bool last_line_found = false; 
+    
+    bstring line = NULL;
+    Stack *stk = Stack_create();
+
+    while(true){
+        if(ftell(file->fileptr) == 0){
+            char c = fgetc(file->fileptr);
+            //printf("FilePostion : %lld Char : %c\n", ftell(file->fileptr), c);
+            bconchar(line, c);
+            //reverse_string(bdata(line), blength(line));
+            bconchar(line, '\n');
+            //log_info("Line : %s", bdata(line));
+            printf("Line : %s", bdata(line));
+
+            debug("Start of file reached!");
+            break;
         }
 
-        fseek(file->fileptr, -2L, SEEK_CUR);
+        char c = fgetc(file->fileptr); // Read the character from the file
 
-        if(feof(file->fileptr)){
-            printf("End of file reached!\n");
+        // 1. First Identify the point where first character of the last line starts
+        if(!last_line_found){
+           if(c != '\n'){
+               last_line_found = true;
+               log_info("Last Line Found!");
+               //printf("%c\n", c);
+               line = bfromcstr("\n"); // Allocating the bstring for the first time
+            }
         }
+        else{
+            //printf("FilePostion : %lld Char : %c\n", ftell(file->fileptr), c);
+            
+            if(c == '\n'){ // The next time we hit a newline it would be the end of
+                           // the current line
+                //reverse_string(bdata(line), strlen(line->data));
+                //bconchar(line, '\n');
+                //log_info("Line : %s", bdata(line));
+                printf("Line : %s", bdata(line));
+                bdestroy(line);
+
+                line = bfromcstr("\n");
+                //printf("%c\n", c);
+                no_of_new_lines++;
+                //printf("New Line found!\n");
+                if(no_of_new_lines == no_lines){
+                    break;
+                }
+            }else{
+                bconchar(line, c); // we will keep on appending the character into the string
+                //printf("%c\n", c);
+            }
+        }
+        
+        fseek(file->fileptr, -2L, SEEK_CUR); // Move back by 2, but fgetc moves forward by 1
+                                             // Hence overall effect is equivalent to moving
+                                             // back by 1
     }
 
-    return no_lines;
+    return 0;
 error:
     return -1;
 }

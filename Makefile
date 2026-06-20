@@ -1,10 +1,11 @@
+CFLAGS=-Wall -Wextra -Wpedantic -ggdb -O2 -std=c23 -Isrc -DNDEBUG #-DDEBUG_FILE
+
 ifeq ($(OS), Windows_NT)
-	SHELL=powershell.exe
+SHELL=powershell.exe
+SANITIZE=-fsanitize=undefined -fsanitize-trap
+else
+SANITIZE=-fsanitize=address
 endif
-CFLAGS=-Wall -Wextra -Wpedantic -ggdb -O2 -std=c23 -Isrc -DNDEBUG #-DDEBUG_FILE
-#CFLAGS=-Wall -Wextra -Wpedantic -ggdb -O2 -std=c23 -Isrc 
-SANITIZEW=-fsanitize=undefined -fsanitize-trap
-SANITIZEL=-fsanitize=address
 
 SRC = $(wildcard src/*.c)
 OBJ = $(patsubst %.c,%.o, $(SRC))
@@ -12,28 +13,26 @@ OBJ = $(patsubst %.c,%.o, $(SRC))
 TEST_SRC = $(wildcard tests/*.c)
 TESTS = $(patsubst %.c,%, $(TEST_SRC))
 
-windows: compilew testw
+all: compile test
 
-linux: compilel testl
+compile: CFLAGS+=$(SANITIZE)
+compile: $(OBJ)
 
-compilew: CFLAGS+=$(SANITIZEW)
-compilew: src/path.h src/file.h $(OBJ)
-
-compilel: CFLAGS+=$(SANITIZEL)
-compilel: src/path.h src/file.h $(OBJ)
-
-testw: CFLAGS+=$(OBJ)
-testw: $(TESTS)
+test: CFLAGS+=$(OBJ)
+ifeq ($(OS), Windows_NT)
+test: $(TESTS)
 	powershell -ExecutionPolicy Bypass -File ./run_tests.ps1
-
-testl: CFLAGS+=$(OBJ)
-testl: $(TESTS)
+else
+test: $(TESTS)
 	./run_tests.sh
+endif
 
-cleanw: 	
-	-rm src/*.o 
+ifeq ($(OS), Windows_NT)
+clean:
+	-rm src/*.o
 	-rm tests/*.exe
-
-cleanl:
+else
+clean:
 	-rm $(OBJ)
 	-rm $(TESTS)
+endif

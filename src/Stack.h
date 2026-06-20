@@ -1,3 +1,4 @@
+/*
 #include <List.h>
 
 // Simply give it another alias
@@ -14,3 +15,17 @@ typedef List Stack;
 
 // You can just think of it as providing a protocol to 
 // use the List in a certain way
+*/
+
+#include <DArray.h>
+
+typedef DArray Stack;
+
+#define Stack_create() DArray_create(sizeof(void *), 50) 
+#define Stack_destroy DArray_destroy
+#define Stack_push DArray_push
+#define Stack_pop DArray_pop
+#define Stack_count DArray_count
+#define Stack_peek List_last
+
+

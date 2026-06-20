@@ -111,7 +111,7 @@ int File_readline(File *file, bstring line){
     // TODO: Fix the case when the file contains only one line
     // If we are already at the end of the file don't do anything 
     if(feof(file->fileptr)){
-        debug("[INFO] End of File reached!");
+        debug("End of File reached!");
         return EOF;
     }
 
@@ -120,50 +120,39 @@ error:
     return -1;
 }
 
-/*
-int File_readlines(File *file){
+int File_readlines(File *file, DArray *lines){
     check(file != NULL, "Invalid File Object!");
+    check(lines != NULL, "Invalid lines DArray provided!");
+
     // store the current position in the file
     long pos = ftell(file->fileptr);
     check(pos != -1, "Failed to get the file position!");
 
     // Reset the file position 
     check(fseek(file->fileptr, 0, SEEK_SET) == 0, "Failed to set the file position!");
-    
-    // Create our DArray of lines
-    // Assuming initially the file to have 100 lines
-    file->lines = DArray_create(sizeof(Line), 100);
-    check(file->lines != NULL, "Failed to read lines!");
 
-    bstring data = NULL;
-    unsigned char c = '\0';
-    size_t line_no = 0;
-    size_t line_len = 0;
+    bstring line = bfromcstr("");
+    check(line != NULL, "Failed to create line bstring!");
+
+    char c = '\0';
 
     while(!feof(file->fileptr)){
         c = fgetc(file->fileptr);
-        line_len++;
-        
-        if(c == '\n'){
-            Line *line = malloc(sizeof(Line));
-            check(line != NULL, "Failed to initialize the line!");  
-            
-            line->data = malloc(sizeof(struct tagbstring));
-            check(line->data != NULL, "Failed to initialize bstring!");
-            
-            line->data->data = calloc(1, line_len + 1);
-            check(line->data->data != NULL, "Failed to initialize bstring data!");
-            line->data->slen = line->data->mlen = line_len;
-            // Moving back the file pointer
-            //fseek(file->fileptr, -(line_len + 1), SEEK_CUR);
-            fseek(file->fileptr, -(line_len), SEEK_CUR);
-            // fgets, if successful returns the address of the passed buffer
-            check(fgets(line->data->data, line_len + 1, file->fileptr) == line->data->data, "Failed to read the line!");
 
-            line->line_no = ++line_no;
-            check(DArray_push(file->lines, line) == 0, "Failed to push line!");
+        if(c == '\n'){
+            bconchar(line, c); 
+            check(DArray_push(lines, line) == 0, "Failed to push line!");
             
-            line_len = 0;
+            c = fgetc(file->fileptr);
+
+            if(!feof(file->fileptr)){
+                line = bfromcstr("");
+                check(line != NULL, "Failed to create line bstring!");        
+
+                bconchar(line, c);
+            }
+        }else{
+            bconchar(line, c);     
         }
     }
     
@@ -172,13 +161,8 @@ int File_readlines(File *file){
     
     return 0;
 error:
-    if(file->lines){ 
-
-        DArray_destroy(file->lines);
-    }
     return -1;
 }
-*/
 
 /*
 // Reads the lines from the file one by one
@@ -240,7 +224,7 @@ int File_writeline(File *file, bstring line){
     // Check if the line have some data
     check(line != NULL, "Invalid line!");
     
-    check(blength(line) == fprintf(file->fileptr, "%s\n", bdata(line)), "Failed to write line to file!");
+    fprintf(file->fileptr, "%s\n", bdata(line));
     
     return 0;
 error:
@@ -262,35 +246,34 @@ error:
     return -1;
 }
 
-// Utitlity function to reverse a string
-/*static inline*/ void reverse_string(unsigned char *str, size_t n){
-    for(int i = 0;i <= n / 2;i++){
-       char temp = str[i];
-       str[i] = str[n - i - 1];
-       str[n - i - 1] = temp;
-    } 
-}
-
 int File_tail(File *file, size_t no_lines, DArray *lines){
     check(file != NULL, "Invalid File Object!");
     check(lines != NULL, "Invalid lines DArray provided!");
-    
+
+    // store the current position in the file
+    long pos = ftell(file->fileptr);
+    check(pos != -1, "Failed to get the file position!");
+
     fseek(file->fileptr, -1L, SEEK_END); // Moving to the end of the file
     size_t no_of_new_lines = 0; // Counting the no. of lines processed 
     bool last_line_found = false; 
     
     bstring line = NULL;
-    Stack *stk = Stack_create();
+    Stack *char_stk = Stack_create();
+    Stack *line_stk = Stack_create();
 
     while(true){
         if(ftell(file->fileptr) == 0){
             char c = fgetc(file->fileptr);
-            //printf("FilePostion : %lld Char : %c\n", ftell(file->fileptr), c);
-            bconchar(line, c);
-            //reverse_string(bdata(line), blength(line));
-            bconchar(line, '\n');
-            //log_info("Line : %s", bdata(line));
-            printf("Line : %s", bdata(line));
+            Stack_push(char_stk, (void *)c); 
+            line = bfromcstr("");
+
+            while(Stack_count(char_stk) > 0){
+                char ch = (char)Stack_pop(char_stk);
+                bconchar(line, ch);
+            }
+
+            Stack_push(line_stk, line);
 
             debug("Start of file reached!");
             break;
@@ -303,31 +286,29 @@ int File_tail(File *file, size_t no_lines, DArray *lines){
            if(c != '\n'){
                last_line_found = true;
                log_info("Last Line Found!");
-               //printf("%c\n", c);
-               line = bfromcstr("\n"); // Allocating the bstring for the first time
-            }
+               Stack_push(char_stk, (void *)'\n');
+           }
         }
         else{
-            //printf("FilePostion : %lld Char : %c\n", ftell(file->fileptr), c);
-            
             if(c == '\n'){ // The next time we hit a newline it would be the end of
                            // the current line
-                //reverse_string(bdata(line), strlen(line->data));
-                //bconchar(line, '\n');
-                //log_info("Line : %s", bdata(line));
-                printf("Line : %s", bdata(line));
-                bdestroy(line);
+                line = bfromcstr("");
 
-                line = bfromcstr("\n");
-                //printf("%c\n", c);
+                while(Stack_count(char_stk) > 0){
+                    char ch = (char)Stack_pop(char_stk);
+                    bconchar(line, ch);
+                }
+                
+                Stack_push(line_stk, line); 
+                
+                Stack_push(char_stk, (void *)'\n');
+
                 no_of_new_lines++;
-                //printf("New Line found!\n");
                 if(no_of_new_lines == no_lines){
                     break;
                 }
             }else{
-                bconchar(line, c); // we will keep on appending the character into the string
-                //printf("%c\n", c);
+                Stack_push(char_stk, (void *)c);
             }
         }
         
@@ -335,6 +316,18 @@ int File_tail(File *file, size_t no_lines, DArray *lines){
                                              // Hence overall effect is equivalent to moving
                                              // back by 1
     }
+    
+    // Copy the lines into the lines DArray
+    while(Stack_count(line_stk) > 0){
+        bstring line = (bstring)Stack_pop(line_stk);
+        DArray_push(lines, line);
+    }
+
+    Stack_destroy(char_stk);
+    Stack_destroy(line_stk);
+
+    // Go back to the same file position
+    check(fseek(file->fileptr, pos, SEEK_SET) == 0, "Failed to set the file position!");
 
     return 0;
 error:

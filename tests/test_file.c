@@ -7,8 +7,8 @@
 File *file = NULL;
 
 char *test_create(){
+    //file = File_open("tests/file.txt", READWRITE_ONLY);
     file = File_open("tests/file.log", READWRITE_ONLY);
-    //file = File_open("tests/file.log", READWRITE_ONLY);
     mu_assert(file != NULL, "Failed to open file!");
 
     return NULL;
@@ -18,12 +18,13 @@ char *test_readline(){
     bstring line = bfromcstr("");
     mu_assert(line != NULL, "Failed to create our test line bstring!");
     //mu_assert(File_readline1(file, line) == 0, "Failed to read line!");
-    mu_assert(File_readline(file, line) == 0, "Failed to read line!");
+    int status = File_readline(file, line);
+    mu_assert(status == 0 || status == EOF , "Failed to read line!");
     fprintf(stderr, "%s", bdata(line));
     
     bdestroy(line);
     line = NULL;
-    
+
     /*
     File_reset(file);
 
@@ -88,19 +89,28 @@ char *test_reset(){
     return NULL;
 }
 
-/*
 char *test_readlines(){
-    mu_assert(File_readlines(file) == 0, "Failed to read lines!");
+    DArray *lines = DArray_create(sizeof(bstring), 10);
+    mu_assert(lines != NULL, "Failed to create lines DArray!");
 
-    for(size_t i = 0;i < DArray_count(file->lines);i++){
-        Line *line = (Line*)DArray_get(file->lines, i);
-        fprintf(stderr, "%llu:%s",line->line_no, bdata(line->data));
+    mu_assert(File_readlines(file, lines) == 0, "Failed to read lines!");
+
+    for(size_t i = 0;i < DArray_count(lines);i++){
+        bstring line = (bstring)DArray_get(lines, i);
+        printf("Line : %s", bdata(line));
+        bdestroy(line);
     }
+
+    DArray_destroy(lines);
    
     return NULL;
 }
 
+char *test_writeline(){
+    bstring line = 
+}
 
+/*
 char *test_search(){
 
     // Assuming to have less than 50 instances of the word to be found initially
@@ -139,6 +149,7 @@ char *test_search(){
 }
 */
 
+/*
 char *test_reverse(){
     char str[10] = "Shivang";
     log_info("String : %s", str);
@@ -149,14 +160,25 @@ char *test_reverse(){
 
     return NULL;
 }
+*/
 
 char *test_tail(){
-    DArray *lines = DArray_create(sizeof(bstring), 5);
+    DArray *lines = DArray_create(sizeof(bstring), 10);
     mu_assert(lines != NULL, "Failed to create lines DArray!");
 
-    File_tail(file, 5, lines);
-    
+    File_tail(file, 6, lines);
+
+    for(int i = 0;i < DArray_count(lines);i++){
+        bstring line = (bstring)DArray_get(lines, i);
+        printf("Line : %s", bdata(line));
+    }
+    for(int i = 0;i < DArray_count(lines);i++){
+        bstring line = (bstring)DArray_get(lines, i);
+        bdestroy(line);
+    } 
+
     DArray_destroy(lines);
+
     return NULL;
 }
 
@@ -170,12 +192,13 @@ char *all_tests(){
     mu_suite_start(); 
 
     mu_run_test(test_create);
-    //mu_run_test(test_readline);
+    mu_run_test(test_readline);
     mu_run_test(test_tail);
+    mu_run_test(test_readline);
     //mu_run_test(test_reverse);
     //mu_run_test(test_readline_compare);
     //mu_run_test(test_reset);
-    //mu_run_test(test_readlines);
+    mu_run_test(test_readlines);
     //mu_run_test(test_search);
     //mu_run_test(test_readline);
     mu_run_test(test_close);

@@ -19,10 +19,6 @@ typedef struct{
 typedef struct{
     Path *file; 
     FILE *fileptr;
-    /*
-    Line *current_line;
-    DArray *lines;
-    */
     ACCESS_MODE fmode;
 }File;
 
@@ -37,8 +33,6 @@ int File_tail(File *file, size_t no_lines, /*Output*/DArray *lines);
 int File_head(File *file, size_t no_lines, /*Output*/DArray *lines);
 // Searches a words in a file
 int File_search(File *file, /*Input*/bstring word, /*Output*/DArray *result);
-
-void reverse_string(unsigned char *str, size_t n); // Handy function to reverse a string
 
 int File_reset(File *file);
 void File_close(File *file);

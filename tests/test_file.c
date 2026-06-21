@@ -8,7 +8,7 @@ File *file = NULL;
 
 char *test_create(){
     //file = File_open("tests/file.txt", READWRITE_ONLY);
-    file = File_open("tests/file.log", READWRITE_ONLY);
+    file = File_Open("tests/file.log", READWRITE_ONLY);
     mu_assert(file != NULL, "Failed to open file!");
 
     return NULL;
@@ -18,7 +18,7 @@ char *test_readline(){
     bstring line = bfromcstr("");
     mu_assert(line != NULL, "Failed to create our test line bstring!");
     //mu_assert(File_readline1(file, line) == 0, "Failed to read line!");
-    mu_assert(File_readline(file, line) != -1, "Failed to read line!");
+    mu_assert(File_Readline(file, line) != -1, "Failed to read line!");
     fprintf(stderr, "%s", bdata(line));
     
     bdestroy(line);
@@ -80,7 +80,7 @@ char *test_readline_compare(){
 */
 
 char *test_reset(){
-    File_reset(file);
+    File_Reset(file);
 
     mu_assert(ftell(file->fileptr) == 0, "Failed to reset the file position!");
 
@@ -91,7 +91,7 @@ char *test_readlines(){
     DArray *lines = DArray_create(sizeof(bstring), 10);
     mu_assert(lines != NULL, "Failed to create lines DArray!");
 
-    mu_assert(File_readlines(file, lines) != -1, "Failed to read lines!");
+    mu_assert(File_Readlines(file, lines) != -1, "Failed to read lines!");
 
     for(size_t i = 0;i < DArray_count(lines);i++){
         bstring line = (bstring)DArray_get(lines, i);
@@ -108,68 +108,17 @@ char *test_writeline(){
     bstring line = bfromcstr("This is a test line");
     mu_assert(line != NULL, "Failed to create the line bstring!");
 
-    mu_assert(File_writeline(file, line) == 0, "Failed to write the line in the file!");
+    mu_assert(File_Writeline(file, line) == 0, "Failed to write the line in the file!");
 
     return NULL;
 }
 
-/*
-char *test_search(){
-
-    // Assuming to have less than 50 instances of the word to be found initially
-    DArray *result = DArray_create(sizeof(bstring), 50); 
-    mu_assert(result != NULL, "Failed to create DArray result!");
-    
-    // word to be searched for
-    bstring word = bfromcstr("line");
-    mu_assert(word != NULL, "Failed to create word for search!");
-
-    mu_assert(File_search(file, word, result) == 0, "File Search failed!");
-    
-    // Print the instances if anything is found
-    for(size_t i = 0;i < DArray_count(result);i++){
-        bstring line = (bstring)DArray_get(result, i);
-        if(line){
-            fprintf(stderr, "%s", bdata(line));
-        }
-    }
-
-    bdestroy(word);
-    word = NULL;
-
-    for(size_t i = 0;i < DArray_count(result);i++){
-        bstring line = (bstring)DArray_get(result, i);
-        if(line){
-            bdestroy(line);
-            line= NULL;
-        }
-    }
-
-    DArray_destroy(result);
-    result = NULL;
-    
-    return NULL;
-}
-*/
-
-/*
-char *test_reverse(){
-    char str[10] = "Shivang";
-    log_info("String : %s", str);
-
-    reverse_string(str, strlen(str));
-
-    log_info("Reversed String : %s", str);
-
-    return NULL;
-}
-*/
 
 char *test_tail(){
     DArray *lines = DArray_create(sizeof(bstring), 10);
     mu_assert(lines != NULL, "Failed to create lines DArray!");
 
-    mu_assert(File_tail(file, 1, lines) != -1, "Failed to read the tail of file!");
+    mu_assert(File_Tail(file, 1, lines) != -1, "Failed to read the tail of file!");
 
     for(int i = 0;i < DArray_count(lines);i++){
         bstring line = (bstring)DArray_get(lines, i);
@@ -191,7 +140,7 @@ char *test_head(){
     DArray *lines = DArray_create(sizeof(bstring), 10);
     mu_assert(lines != NULL, "Failed to create lines DArray!");
 
-    mu_assert(File_head(file, 0, lines) != -1, "Failed to read the head of the file!");
+    mu_assert(File_Head(file, 6, lines) != -1, "Failed to read the head of the file!");
 
     for(int i = 0;i < DArray_count(lines);i++){
         bstring line = (bstring)DArray_get(lines, i);
@@ -205,7 +154,7 @@ char *test_head(){
 }
 
 char *test_close(){
-    File_close(file);
+    File_Close(file);
 
     return NULL;
 }
@@ -214,15 +163,11 @@ char *all_tests(){
     mu_suite_start(); 
 
     mu_run_test(test_create);
-    //mu_run_test(test_readline);
+    mu_run_test(test_readline);
     mu_run_test(test_tail);
     //mu_run_test(test_readline);
-    //mu_run_test(test_reverse);
-    //mu_run_test(test_readline_compare);
-    //mu_run_test(test_reset);
-    //mu_run_test(test_readlines);
+    mu_run_test(test_readlines);
     //mu_run_test(test_writeline);
-    //mu_run_test(test_search);
     mu_run_test(test_head);
     mu_run_test(test_close);
 

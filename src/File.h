@@ -10,31 +10,29 @@ typedef enum {
     APPEND_ONLY
 }ACCESS_MODE;
 
-// Represents a single line in the file
-typedef struct{
-    bstring data;
-    size_t line_no;
-}Line;
-
 typedef struct{
     Path *file; 
     FILE *fileptr;
     ACCESS_MODE fmode;
 }File;
 
-File *File_open(const char *filepath, ACCESS_MODE mode);
+File *File_Open(const char *filepath, ACCESS_MODE mode);
 
 //int File_readline1(File *file, /*Output*/bstring line);
-int File_readline(File *file, /*Output*/bstring line);
-int File_readlines(File *file, /*Output*/DArray *lines);
-int File_writeline(File *file, /*Input*/bstring line); // Provide a single line of data to write
-int File_writelines(File *file, /*Input*/DArray *lines); // 
-int File_tail(File *file, size_t no_lines, /*Output*/DArray *lines);
-int File_head(File *file, size_t no_lines, /*Output*/DArray *lines);
-// Searches a words in a file
-int File_search(File *file, /*Input*/bstring word, /*Output*/DArray *result);
+int File_Readline(File *file, /*Output*/bstring line);
 
-int File_reset(File *file);
-void File_close(File *file);
+int File_Readlines(File *file, /*Output*/DArray *lines);
+
+int File_Writeline(File *file, /*Input*/bstring line); // Provide a single line of data to write
+
+int File_Writelines(File *file, /*Input*/DArray *lines); // 
+
+int File_Tail(File *file, size_t no_lines, /*Output*/DArray *lines);
+
+int File_Head(File *file, size_t no_lines, /*Output*/DArray *lines);
+
+int File_Reset(File *file);
+
+void File_Close(File *file);
 
 #endif

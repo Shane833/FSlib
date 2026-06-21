@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <Stack.h>
 
-File *File_open(const char *filepath, ACCESS_MODE mode){
+File *File_Open(const char *filepath, ACCESS_MODE mode){
     File *temp = NULL; //
 
     check(filepath != NULL, "Invalid file path!");
@@ -38,63 +38,12 @@ File *File_open(const char *filepath, ACCESS_MODE mode){
     
     return temp;
 error:
-    if(temp) File_close(temp);
+    if(temp) File_Close(temp);
     return NULL;
 }
 
-/* PERFORMS WORSE THEN OTHER FUNCTION 
-int File_readline1(File *file, bstring line){
-    check(file != NULL, "Invalid File Object!");
-    check(file->fileptr != NULL, "No file opened!");
-
-    size_t line_len = 0; 
-    unsigned char c = '\0';
-
-    while(!feof(file->fileptr)){
-        c = fgetc(file->fileptr);
-        line_len++;
-        
-        if(c == '\n'){
-            fseek(file->fileptr, -(line_len), SEEK_CUR);
-            // Get the line
-            // First deallocate any existing data
-            free(line->data);
-            // Allocate the line data and copy the line
-            line->data = calloc(1, line_len + 1);
-            check(line->data != NULL, " Failed to initialize line data");
-            line->mlen = line->slen = line_len; 
-            // fgets, if successful returns the address of the passed buffer
-            check(fgets(line->data, line_len + 1,\
-                        file->fileptr) == line->data, "Failed to read the line!");
-
-            break;
-        }
-        
-    }
-    
-    // TODO: Fix the case when the file contains only one line
-    // If we are already at the end of the file don't do anything 
-    if(feof(file->fileptr)){
-        fprintf(stderr, "[INFO] End of File reached!\n");
-        //if(file->current_line->line_no == 0){ file->current_line->line_no = 1; }
-        return 0; // but this is not a failed state, its completely fine 
-    }else{
-        return 0;
-    }
-
-error:
-    // Reset the line
-    if(line->data){
-        free(line->data);
-        line->data = NULL;
-    }
-    //file->current_line->line_no = 0;
-    return -1;
-}
-*/
-
 // This function performs better than the above implementation
-int File_readline(File *file, bstring line){
+int File_Readline(File *file, bstring line){
     check(file != NULL, "Invalid File Object!");
     check(file->fileptr != NULL, "No file opened!");
 
@@ -116,7 +65,8 @@ int File_readline(File *file, bstring line){
     // If we are already at the end of the file don't do anything 
     if(feof(file->fileptr)){
         debug("End of File reached!");
-        return EOF;
+        //return EOF;
+        return -1;
     }
 
     return 0;
@@ -124,7 +74,8 @@ error:
     return -1;
 }
 
-int File_readlines(File *file, DArray *lines){
+
+int File_Readlines(File *file, DArray *lines){
     check(file != NULL, "Invalid File Object!");
     // Check for the correct file permissions
     check(file->fmode == READ_ONLY || file->fmode == READWRITE_ONLY, "Invalid File Permission for Read Operation!");
@@ -170,47 +121,8 @@ error:
     return -1;
 }
 
-/*
-// Reads the lines from the file one by one
-// Searches for the provided word in those files
-// If found adds the line no and the charcter position
-// of the word found in the results DArray
-// returns 0 on success and -1 if it fails
-int File_search(File *file, bstring word, DArray *result){
-    check(file != NULL, "Invalid File Object!");
-    check(file->fileptr != NULL, "No file opened!");
-    check(word != NULL, "Invalid word!")
-    check(word->slen >= 0 && word->mlen >= word->slen && word->data != NULL, "Invalid word data!");
-    check(result != NULL, "Invalid result DArray!");
-        
-    // Read all the lines
-    check(File_readlines(file) == 0, "Failed to read lines!");
-    // Go through each of the lines and search for the word
-    for(size_t i = 0;i < DArray_count(file->lines); i++){
-        Line *line = (Line *)DArray_get(file->lines, i);
-        if(line){
-            // Search for the word
-            if(binstr(line->data, 0, word) != BSTR_ERR){
-                // I'll be copying the whole line hence no need to
-                // check the line again, if the word is found once
-                // then we won't be checking for multiple occurences
-                bstring found = NULL;
-                
-                found = bformat("(%s:%llu) : %s", bdata(file->file->path), line->line_no, bdata(line->data));
-                check(found != NULL, "Failed to copy line data!");
 
-                check(DArray_push(result, found) == 0,"Failed to add line!");
-            }
-        }
-    }
-
-   return 0;
-error:
-    return -1;
-}
-*/
-
-int File_reset(File *file){
+int File_Reset(File *file){
     check(file != NULL, "Invalid File Object!");
     // Reset file position OR I could've called rewind(file->fileptr)
     check(fseek(file->fileptr, 0, SEEK_SET) == 0, "Failed to set the file position!");
@@ -220,7 +132,8 @@ error:
     return -1;
 }
 
-int File_writeline(File *file, bstring line){
+
+int File_Writeline(File *file, bstring line){
     check(file != NULL, "Invalid File Object!");    
 
     // Check the access mode
@@ -245,7 +158,8 @@ error:
     return -1;
 }
 
-int File_writelines(File *file, DArray *lines){
+
+int File_Writelines(File *file, DArray *lines){
     check(file != NULL, "Invalid File Object!"); 
 
     // Check the access mode
@@ -274,11 +188,11 @@ error:
     return -1;
 }
 
-int File_tail(File *file, size_t no_lines, DArray *lines){
+
+int File_Tail(File *file, size_t no_lines, DArray *lines){
     check(file != NULL, "Invalid File Object!");
     // Check for the correct file permissions
     check(file->fmode == READ_ONLY || file->fmode == READWRITE_ONLY, "Invalid File Permission for Tail Operation!");
-
     check(lines != NULL, "Invalid lines DArray provided!");
 
     // store the current position in the file
@@ -288,28 +202,30 @@ int File_tail(File *file, size_t no_lines, DArray *lines){
     fseek(file->fileptr, 0L, SEEK_END); // Moving to the end of the file
     size_t no_of_new_lines = 0; // Counting the no. of lines processed 
     bool last_line_found = false; 
-    
+   
+    // Variables to be used ahead
     bstring line = NULL;
-    Stack *char_stk = Stack_create();
+    Stack *char_stk = Stack_create(); // stores the characters read from the stream
     check(char_stk != NULL, "Failed to create character stack!");
-    Stack *line_stk = Stack_create();
+    Stack *line_stk = Stack_create(); // stores the lines formed from the characters
     check(line_stk != NULL, "Failed to create line stack!");
 
     //while(true){
       while(no_of_new_lines < no_lines){
+          // If we are at the start of the file
         if(ftell(file->fileptr) == 0){
-            char c = fgetc(file->fileptr);
+            char c = fgetc(file->fileptr); // fetch the last characeter
             Stack_push(char_stk, (void *)c); 
 
             line = bfromcstr("");
             check(line != NULL, "Failed to create line bstring!");
 
-            while(Stack_count(char_stk) > 0){
+            while(Stack_count(char_stk) > 0){ // Create a line from the read characters
                 char ch = (char)Stack_pop(char_stk);
                 check(bconchar(line, ch) == BSTR_OK, "Failed to concatenate character onto line");
             }
 
-            Stack_push(line_stk, line);
+            Stack_push(line_stk, line); // Adding the line to the stack
 
             debug("Start of file reached!");
             break;
@@ -322,7 +238,7 @@ int File_tail(File *file, size_t no_lines, DArray *lines){
            if(c != '\n'){
                last_line_found = true;
                debug("Last Line Found!");
-               Stack_push(char_stk, (void *)'\n');
+               Stack_push(char_stk, (void *)'\n'); 
            }
         }
         else{
@@ -331,23 +247,20 @@ int File_tail(File *file, size_t no_lines, DArray *lines){
                 line = bfromcstr("");
                 check(line != NULL, "Failed to create line bstring!");
 
-                while(Stack_count(char_stk) > 0){
+                while(Stack_count(char_stk) > 0){// Create a line from the read characters
                     char ch = (char)Stack_pop(char_stk);
                     check(bconchar(line, ch) == BSTR_OK, "Failed to concatenate character onto line");
                 }
                 
-                Stack_push(line_stk, line); 
+                Stack_push(line_stk, line); // Adding the line to the stack
                 
                 Stack_push(char_stk, (void *)'\n');
 
-                no_of_new_lines++;
-                /*
-                if(no_of_new_lines == no_lines){
-                    break;
-                }
-                */
+                no_of_new_lines++; // increment the no. of lines read till now
+
             }else{
-                Stack_push(char_stk, (void *)c);
+                Stack_push(char_stk, (void *)c); // Since on a 64-bit machine any pointer is 8 bytes
+                                                 // more than enough to hold a single byte char
             }
         }
         
@@ -370,11 +283,16 @@ int File_tail(File *file, size_t no_lines, DArray *lines){
 
     return 0;
 error:
+    if(char_stk)
+        Stack_destroy(char_stk);
+    if(line_stk)
+        Stack_destroy(line_stk);
+
     return -1;
 }
 
 
-int File_head(File *file, size_t no_lines, DArray *lines){
+int File_Head(File *file, size_t no_lines, DArray *lines){
     check(file != NULL, "Invalid File Object!");
     check(file->fileptr != NULL, "No file opened!");
 
@@ -385,17 +303,19 @@ int File_head(File *file, size_t no_lines, DArray *lines){
     long pos = ftell(file->fileptr);
     check(pos != -1, "Failed to get the file position!");
     
-   // Use the already defined readline function
-   for(int i = 0;i < no_lines;i++){
+    // Reset the file position 
+    check(fseek(file->fileptr, 0, SEEK_SET) == 0, "Failed to set the file position!");
+
+    // Use the already defined readline function
+    for(int i = 0;i < no_lines;i++){
         bstring line = bfromcstr("");
         check(line != NULL, "Failed to create a line bstring!");
 
-        int status = File_readline(file, line);
-
-        if(status == EOF){
+        int status = File_Readline(file, line);
+        
+        if(feof(file->fileptr) || status == -1){ 
+            bdestroy(line); // deallocate this line  
             break;
-        }else if(status == -1){
-            return -1; 
         }
 
         DArray_push(lines, line);
@@ -409,7 +329,8 @@ error:
    return -1;
 }
 
-void File_close(File *file){
+
+void File_Close(File *file){
     if(file){
         if(file->fileptr){
             fclose(file->fileptr);

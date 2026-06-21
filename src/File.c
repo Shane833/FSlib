@@ -97,6 +97,10 @@ error:
 int File_readline(File *file, bstring line){
     check(file != NULL, "Invalid File Object!");
     check(file->fileptr != NULL, "No file opened!");
+
+    // Check for the correct file permissions
+    check(file->fmode == READ_ONLY || file->fmode == READWRITE_ONLY, "Invalid File Permission for Read Operation!");
+
     check(line != NULL, "Invalid line bstring provided!");
 
     unsigned char c = '\0';
@@ -122,6 +126,8 @@ error:
 
 int File_readlines(File *file, DArray *lines){
     check(file != NULL, "Invalid File Object!");
+    // Check for the correct file permissions
+    check(file->fmode == READ_ONLY || file->fmode == READWRITE_ONLY, "Invalid File Permission for Read Operation!");
     check(lines != NULL, "Invalid lines DArray provided!");
 
     // store the current position in the file
@@ -219,13 +225,21 @@ int File_writeline(File *file, bstring line){
 
     // Check the access mode
     check(file->fmode == WRITE_ONLY || file->fmode == READWRITE_ONLY\
-          || file->fmode == APPEND_ONLY, "Invalid Access Mode, Failed to write line!");
+          || file->fmode == APPEND_ONLY, "Invalid File Permission for Write Operation!");
     
     // Check if the line have some data
     check(line != NULL, "Invalid line!");
     
-    fprintf(file->fileptr, "%s\n", bdata(line));
+    // store the current position in the file
+    long pos = ftell(file->fileptr);
+    check(pos != -1, "Failed to get the file position!");
     
+    check(fseek(file->fileptr, 0, SEEK_END) == 0, "Failed to move to the end of the file!");
+    fprintf(file->fileptr, "%s\n", bdata(line));
+
+    // Go back to the same file position
+    check(fseek(file->fileptr, pos, SEEK_SET) == 0, "Failed to set the file position!");
+
     return 0;
 error:
     return -1;
@@ -236,10 +250,24 @@ int File_writelines(File *file, DArray *lines){
 
     // Check the access mode
     check(file->fmode == WRITE_ONLY || file->fmode == READWRITE_ONLY\
-          || file->fmode == APPEND_ONLY, "Invalid Access Mode, Failed to write line!");
+          || file->fmode == APPEND_ONLY, "Invalid File Permission for Write Operation!");
 
     // Check the DArray lines if it contains any data
     check(lines != NULL, "Invalid DArray lines!");
+
+    // store the current position in the file
+    long pos = ftell(file->fileptr);
+    check(pos != -1, "Failed to get the file position!");
+    
+    check(fseek(file->fileptr, 0, SEEK_END) == 0, "Failed to move to the end of the file!");
+    
+    for(int i = 0;i < DArray_count(lines);i++){
+        bstring line = (bstring)DArray_get(lines, i);
+        fprintf(file->fileptr, "%s\n", bdata(line));
+    }
+
+    // Go back to the same file position
+    check(fseek(file->fileptr, pos, SEEK_SET) == 0, "Failed to set the file position!");
 
     return 0;
 error:
@@ -248,29 +276,37 @@ error:
 
 int File_tail(File *file, size_t no_lines, DArray *lines){
     check(file != NULL, "Invalid File Object!");
+    // Check for the correct file permissions
+    check(file->fmode == READ_ONLY || file->fmode == READWRITE_ONLY, "Invalid File Permission for Tail Operation!");
+
     check(lines != NULL, "Invalid lines DArray provided!");
 
     // store the current position in the file
     long pos = ftell(file->fileptr);
     check(pos != -1, "Failed to get the file position!");
 
-    fseek(file->fileptr, -1L, SEEK_END); // Moving to the end of the file
+    fseek(file->fileptr, 0L, SEEK_END); // Moving to the end of the file
     size_t no_of_new_lines = 0; // Counting the no. of lines processed 
     bool last_line_found = false; 
     
     bstring line = NULL;
     Stack *char_stk = Stack_create();
+    check(char_stk != NULL, "Failed to create character stack!");
     Stack *line_stk = Stack_create();
+    check(line_stk != NULL, "Failed to create line stack!");
 
-    while(true){
+    //while(true){
+      while(no_of_new_lines < no_lines){
         if(ftell(file->fileptr) == 0){
             char c = fgetc(file->fileptr);
             Stack_push(char_stk, (void *)c); 
+
             line = bfromcstr("");
+            check(line != NULL, "Failed to create line bstring!");
 
             while(Stack_count(char_stk) > 0){
                 char ch = (char)Stack_pop(char_stk);
-                bconchar(line, ch);
+                check(bconchar(line, ch) == BSTR_OK, "Failed to concatenate character onto line");
             }
 
             Stack_push(line_stk, line);
@@ -285,7 +321,7 @@ int File_tail(File *file, size_t no_lines, DArray *lines){
         if(!last_line_found){
            if(c != '\n'){
                last_line_found = true;
-               log_info("Last Line Found!");
+               debug("Last Line Found!");
                Stack_push(char_stk, (void *)'\n');
            }
         }
@@ -293,10 +329,11 @@ int File_tail(File *file, size_t no_lines, DArray *lines){
             if(c == '\n'){ // The next time we hit a newline it would be the end of
                            // the current line
                 line = bfromcstr("");
+                check(line != NULL, "Failed to create line bstring!");
 
                 while(Stack_count(char_stk) > 0){
                     char ch = (char)Stack_pop(char_stk);
-                    bconchar(line, ch);
+                    check(bconchar(line, ch) == BSTR_OK, "Failed to concatenate character onto line");
                 }
                 
                 Stack_push(line_stk, line); 
@@ -304,9 +341,11 @@ int File_tail(File *file, size_t no_lines, DArray *lines){
                 Stack_push(char_stk, (void *)'\n');
 
                 no_of_new_lines++;
+                /*
                 if(no_of_new_lines == no_lines){
                     break;
                 }
+                */
             }else{
                 Stack_push(char_stk, (void *)c);
             }
@@ -332,6 +371,42 @@ int File_tail(File *file, size_t no_lines, DArray *lines){
     return 0;
 error:
     return -1;
+}
+
+
+int File_head(File *file, size_t no_lines, DArray *lines){
+    check(file != NULL, "Invalid File Object!");
+    check(file->fileptr != NULL, "No file opened!");
+
+    // Check for the correct file permissions
+    check(file->fmode == READ_ONLY || file->fmode == READWRITE_ONLY, "Invalid File Permission for Read Operation!");
+    
+    // store the current position in the file
+    long pos = ftell(file->fileptr);
+    check(pos != -1, "Failed to get the file position!");
+    
+   // Use the already defined readline function
+   for(int i = 0;i < no_lines;i++){
+        bstring line = bfromcstr("");
+        check(line != NULL, "Failed to create a line bstring!");
+
+        int status = File_readline(file, line);
+
+        if(status == EOF){
+            break;
+        }else if(status == -1){
+            return -1; 
+        }
+
+        DArray_push(lines, line);
+   } 
+   
+    // Go back to the same file position
+    check(fseek(file->fileptr, pos, SEEK_SET) == 0, "Failed to set the file position!");
+
+   return 0;
+error:
+   return -1;
 }
 
 void File_close(File *file){

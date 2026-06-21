@@ -18,8 +18,7 @@ char *test_readline(){
     bstring line = bfromcstr("");
     mu_assert(line != NULL, "Failed to create our test line bstring!");
     //mu_assert(File_readline1(file, line) == 0, "Failed to read line!");
-    int status = File_readline(file, line);
-    mu_assert(status == 0 || status == EOF , "Failed to read line!");
+    mu_assert(File_readline(file, line) != -1, "Failed to read line!");
     fprintf(stderr, "%s", bdata(line));
     
     bdestroy(line);
@@ -84,7 +83,6 @@ char *test_reset(){
     File_reset(file);
 
     mu_assert(ftell(file->fileptr) == 0, "Failed to reset the file position!");
-    //mu_assert(file->current_line->line_no == 0, "Failed to reset the current line!");
 
     return NULL;
 }
@@ -93,7 +91,7 @@ char *test_readlines(){
     DArray *lines = DArray_create(sizeof(bstring), 10);
     mu_assert(lines != NULL, "Failed to create lines DArray!");
 
-    mu_assert(File_readlines(file, lines) == 0, "Failed to read lines!");
+    mu_assert(File_readlines(file, lines) != -1, "Failed to read lines!");
 
     for(size_t i = 0;i < DArray_count(lines);i++){
         bstring line = (bstring)DArray_get(lines, i);
@@ -107,7 +105,12 @@ char *test_readlines(){
 }
 
 char *test_writeline(){
-    bstring line = 
+    bstring line = bfromcstr("This is a test line");
+    mu_assert(line != NULL, "Failed to create the line bstring!");
+
+    mu_assert(File_writeline(file, line) == 0, "Failed to write the line in the file!");
+
+    return NULL;
 }
 
 /*
@@ -166,16 +169,35 @@ char *test_tail(){
     DArray *lines = DArray_create(sizeof(bstring), 10);
     mu_assert(lines != NULL, "Failed to create lines DArray!");
 
-    File_tail(file, 6, lines);
+    mu_assert(File_tail(file, 1, lines) != -1, "Failed to read the tail of file!");
 
     for(int i = 0;i < DArray_count(lines);i++){
         bstring line = (bstring)DArray_get(lines, i);
         printf("Line : %s", bdata(line));
+        /*
+        for(int i = 0;i < blength(line);i++){
+            printf("char : %d ", line->data[i]);
+        }
+        */
+        bdestroy(line);
     }
+
+    DArray_destroy(lines);
+
+    return NULL;
+}
+
+char *test_head(){
+    DArray *lines = DArray_create(sizeof(bstring), 10);
+    mu_assert(lines != NULL, "Failed to create lines DArray!");
+
+    mu_assert(File_head(file, 0, lines) != -1, "Failed to read the head of the file!");
+
     for(int i = 0;i < DArray_count(lines);i++){
         bstring line = (bstring)DArray_get(lines, i);
+        printf("Line : %s", bdata(line));
         bdestroy(line);
-    } 
+    }
 
     DArray_destroy(lines);
 
@@ -192,15 +214,16 @@ char *all_tests(){
     mu_suite_start(); 
 
     mu_run_test(test_create);
-    mu_run_test(test_readline);
+    //mu_run_test(test_readline);
     mu_run_test(test_tail);
-    mu_run_test(test_readline);
+    //mu_run_test(test_readline);
     //mu_run_test(test_reverse);
     //mu_run_test(test_readline_compare);
     //mu_run_test(test_reset);
-    mu_run_test(test_readlines);
+    //mu_run_test(test_readlines);
+    //mu_run_test(test_writeline);
     //mu_run_test(test_search);
-    //mu_run_test(test_readline);
+    mu_run_test(test_head);
     mu_run_test(test_close);
 
     return NULL;

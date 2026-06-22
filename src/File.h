@@ -18,7 +18,6 @@ typedef struct{
 
 File *File_Open(const char *filepath, ACCESS_MODE mode);
 
-//int File_readline1(File *file, /*Output*/bstring line);
 int File_Readline(File *file, /*Output*/bstring line);
 
 int File_Readlines(File *file, /*Output*/DArray *lines);

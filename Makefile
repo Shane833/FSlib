@@ -27,9 +27,6 @@ test: $(TESTS)
 	./run_tests.sh
 endif
 
-build:
-	-mkdir build
-
 ifeq ($(OS), Windows_NT)
 clean:
 	-powershell rm src/*.o

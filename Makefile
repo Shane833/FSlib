@@ -27,10 +27,13 @@ test: $(TESTS)
 	./run_tests.sh
 endif
 
+build:
+	-mkdir build
+
 ifeq ($(OS), Windows_NT)
 clean:
-	-rm src/*.o
-	-rm tests/*.exe
+	-powershell rm src/*.o
+	-powershell rm tests/*.exe
 else
 clean:
 	-rm $(OBJ)
